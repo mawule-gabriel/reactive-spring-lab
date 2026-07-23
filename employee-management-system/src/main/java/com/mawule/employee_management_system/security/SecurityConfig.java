@@ -37,17 +37,13 @@ public class SecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        // Public endpoints
                         .pathMatchers("/api/auth/**").permitAll()
                         .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
-                        
-                        // Read-only access for ROLE_USER (and ROLE_ADMIN)
+
                         .pathMatchers(HttpMethod.GET, "/api/departments/**", "/api/employees/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        
-                        // Write access for ROLE_ADMIN only
+
                         .pathMatchers("/api/departments/**", "/api/employees/**").hasAuthority("ROLE_ADMIN")
-                        
-                        // Any other request requires authentication
+
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)

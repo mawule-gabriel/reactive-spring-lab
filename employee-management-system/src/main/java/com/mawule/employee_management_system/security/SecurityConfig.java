@@ -20,6 +20,8 @@ public class SecurityConfig {
     private final ReactiveUserDetailsServiceImpl userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final PasswordEncoder passwordEncoder;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Bean
     public ReactiveAuthenticationManager reactiveAuthenticationManager() {
@@ -36,11 +38,17 @@ public class SecurityConfig {
                 .cors(ServerHttpSecurity.CorsSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
+                )
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/api/auth/**").permitAll()
                         .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
 
                         .pathMatchers(HttpMethod.GET, "/api/departments/**", "/api/employees/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+
+                        .pathMatchers(HttpMethod.PUT, "/api/employees/me").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
 
                         .pathMatchers("/api/departments/**", "/api/employees/**").hasAuthority("ROLE_ADMIN")
 

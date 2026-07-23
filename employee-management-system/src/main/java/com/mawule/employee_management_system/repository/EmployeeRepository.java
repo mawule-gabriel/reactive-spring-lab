@@ -10,4 +10,6 @@ public interface EmployeeRepository extends ReactiveCrudRepository<Employee, Lon
     Flux<Employee> findAllByDepartmentId(Long departmentId);
 
     Mono<Long> countByDepartmentId(Long departmentId);
+
+    Mono<Employee> findByEmail(String email);
 }

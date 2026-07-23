@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 public class Employee {
 
     @Id
+    @Column("id")
     private Long id;
 
     @Column("first_name")

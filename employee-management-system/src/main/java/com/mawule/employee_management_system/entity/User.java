@@ -21,6 +21,7 @@ import org.springframework.data.relational.core.mapping.Table;
 public class User {
 
     @Id
+    @Column("id")
     private Long id;
 
     @Column("email")

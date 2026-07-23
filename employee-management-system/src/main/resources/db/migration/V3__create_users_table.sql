@@ -7,6 +7,5 @@ CREATE TABLE IF NOT EXISTS users (
     role          VARCHAR(50)     NOT NULL,
 
     CONSTRAINT pk_users       PRIMARY KEY (id),
-    CONSTRAINT uq_users_email UNIQUE (email),
-    CONSTRAINT chk_users_role CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER'))
+    CONSTRAINT uq_users_email UNIQUE (email)
 );

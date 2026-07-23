@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 public class Department {
 
     @Id
+    @Column("id")
     private Long id;
 
     @Column("name")

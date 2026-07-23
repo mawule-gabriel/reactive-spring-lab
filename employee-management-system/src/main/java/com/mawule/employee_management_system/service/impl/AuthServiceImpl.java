@@ -4,6 +4,8 @@ import com.mawule.employee_management_system.dto.request.LoginRequest;
 import com.mawule.employee_management_system.dto.request.RegisterRequest;
 import com.mawule.employee_management_system.dto.response.AuthResponse;
 import com.mawule.employee_management_system.entity.User;
+import com.mawule.employee_management_system.exception.ResourceNotFoundException;
+import com.mawule.employee_management_system.repository.EmployeeRepository;
 import com.mawule.employee_management_system.repository.UserRepository;
 import com.mawule.employee_management_system.security.JwtUtil;
 import com.mawule.employee_management_system.service.AuthService;
@@ -31,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private static final String BEARER = "Bearer";
 
     private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final ReactiveAuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -40,14 +43,18 @@ public class AuthServiceImpl implements AuthService {
         return userRepository.findByEmail(request.email())
                 .flatMap(existing -> Mono.<AuthResponse>error(new ResponseStatusException(
                         HttpStatus.CONFLICT, "Email is already registered")))
-                .switchIfEmpty(Mono.defer(() -> {
-                    User user = new User();
-                    user.setEmail(request.email());
-                    user.setPassword(passwordEncoder.encode(request.password()));
-                    user.setRole(DEFAULT_ROLE);
-                    return userRepository.save(user)
-                            .map(saved -> buildResponse(saved.getEmail(), saved.getRole()));
-                }));
+                .switchIfEmpty(Mono.defer(() -> employeeRepository.findByEmail(request.email())
+                        .switchIfEmpty(Mono.error(new ResourceNotFoundException(
+                                "No employee record found for " + request.email()
+                                        + ". Ask an administrator to add you as an employee first.")))
+                        .flatMap(employee -> {
+                            User user = new User();
+                            user.setEmail(request.email());
+                            user.setPassword(passwordEncoder.encode(request.password()));
+                            user.setRole(DEFAULT_ROLE);
+                            return userRepository.save(user)
+                                    .map(saved -> buildResponse(saved.getEmail(), saved.getRole()));
+                        })));
     }
 
     @Override

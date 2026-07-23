@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,7 @@ public class JwtUtil {
     private static final String ROLE_CLAIM = "role";
 
     private final SecretKey signingKey;
+    @Getter
     private final long expiryMs;
 
     public JwtUtil(
@@ -59,10 +61,6 @@ public class JwtUtil {
         } catch (JwtException | IllegalArgumentException ex) {
             return false;
         }
-    }
-
-    public long getExpiryMs() {
-        return expiryMs;
     }
 
     private Claims parseClaims(String token) {

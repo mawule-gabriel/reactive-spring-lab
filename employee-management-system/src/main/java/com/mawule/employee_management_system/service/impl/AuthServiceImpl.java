@@ -3,9 +3,11 @@ package com.mawule.employee_management_system.service.impl;
 import com.mawule.employee_management_system.dto.request.LoginRequest;
 import com.mawule.employee_management_system.dto.request.RegisterRequest;
 import com.mawule.employee_management_system.dto.response.AuthResponse;
+import com.mawule.employee_management_system.entity.RevokedToken;
 import com.mawule.employee_management_system.entity.User;
 import com.mawule.employee_management_system.exception.ResourceNotFoundException;
 import com.mawule.employee_management_system.repository.EmployeeRepository;
+import com.mawule.employee_management_system.repository.RevokedTokenRepository;
 import com.mawule.employee_management_system.repository.UserRepository;
 import com.mawule.employee_management_system.security.JwtUtil;
 import com.mawule.employee_management_system.service.AuthService;
@@ -34,6 +36,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
+    private final RevokedTokenRepository revokedTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final ReactiveAuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -71,6 +74,20 @@ public class AuthServiceImpl implements AuthService {
                 })
                 .onErrorMap(error -> !(error instanceof ResponseStatusException),
                         error -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+    }
+
+    @Override
+    public Mono<Void> logout(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER + " ")) {
+            return Mono.error(new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Missing or malformed Authorization header"));
+        }
+        String token = authorizationHeader.substring(BEARER.length() + 1);
+        if (!jwtUtil.isTokenValid(token)) {
+            return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token"));
+        }
+        RevokedToken revokedToken = new RevokedToken(jwtUtil.extractJti(token), jwtUtil.extractExpiration(token));
+        return revokedTokenRepository.save(revokedToken).then();
     }
 
     private AuthResponse buildResponse(String email, String role) {

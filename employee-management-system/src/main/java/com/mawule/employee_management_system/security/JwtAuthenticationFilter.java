@@ -1,5 +1,6 @@
 package com.mawule.employee_management_system.security;
 
+import com.mawule.employee_management_system.repository.RevokedTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +19,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter implements WebFilter {
 
     private final JwtUtil jwtUtil;
+    private final RevokedTokenRepository revokedTokenRepository;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -29,20 +31,22 @@ public class JwtAuthenticationFilter implements WebFilter {
 
         String token = authHeader.substring(7);
 
-        if (jwtUtil.isTokenValid(token)) {
-            String username = jwtUtil.extractUsername(token);
-            String role = jwtUtil.extractRole(token);
-
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    username,
-                    null,
-                    Collections.singletonList(new SimpleGrantedAuthority(role))
-            );
-
-            return chain.filter(exchange)
-                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+        if (!jwtUtil.isTokenValid(token)) {
+            return chain.filter(exchange);
         }
 
-        return chain.filter(exchange);
+        return revokedTokenRepository.existsById(jwtUtil.extractJti(token))
+                .flatMap(revoked -> {
+                    if (revoked) {
+                        return chain.filter(exchange);
+                    }
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            jwtUtil.extractUsername(token),
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority(jwtUtil.extractRole(token)))
+                    );
+                    return chain.filter(exchange)
+                            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
+                });
     }
 }

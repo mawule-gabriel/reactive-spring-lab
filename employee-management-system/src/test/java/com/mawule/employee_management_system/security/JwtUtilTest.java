@@ -2,6 +2,8 @@ package com.mawule.employee_management_system.security;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtUtilTest {
@@ -17,6 +19,26 @@ class JwtUtilTest {
         assertThat(jwtUtil.extractUsername(token)).isEqualTo("jane@company.com");
         assertThat(jwtUtil.extractRole(token)).isEqualTo("ROLE_USER");
         assertThat(jwtUtil.isTokenValid(token)).isTrue();
+    }
+
+    @Test
+    void eachTokenGetsAUniqueJti() {
+        JwtUtil jwtUtil = new JwtUtil(SECRET, 60_000);
+
+        String first = jwtUtil.generateToken("jane@company.com", "ROLE_USER");
+        String second = jwtUtil.generateToken("jane@company.com", "ROLE_USER");
+
+        assertThat(jwtUtil.extractJti(first)).isNotBlank();
+        assertThat(jwtUtil.extractJti(first)).isNotEqualTo(jwtUtil.extractJti(second));
+    }
+
+    @Test
+    void extractedExpirationIsInTheFuture() {
+        JwtUtil jwtUtil = new JwtUtil(SECRET, 60_000);
+
+        String token = jwtUtil.generateToken("jane@company.com", "ROLE_USER");
+
+        assertThat(jwtUtil.extractExpiration(token)).isAfter(LocalDateTime.now());
     }
 
     @Test

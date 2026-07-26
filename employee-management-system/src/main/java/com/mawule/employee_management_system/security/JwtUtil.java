@@ -10,7 +10,10 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Generates and validates HMAC-SHA256 signed JWTs.
@@ -38,6 +41,7 @@ public class JwtUtil {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expiryMs);
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim(ROLE_CLAIM, role)
                 .issuedAt(now)
@@ -52,6 +56,14 @@ public class JwtUtil {
 
     public String extractRole(String token) {
         return parseClaims(token).get(ROLE_CLAIM, String.class);
+    }
+
+    public String extractJti(String token) {
+        return parseClaims(token).getId();
+    }
+
+    public LocalDateTime extractExpiration(String token) {
+        return parseClaims(token).getExpiration().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     public boolean isTokenValid(String token) {

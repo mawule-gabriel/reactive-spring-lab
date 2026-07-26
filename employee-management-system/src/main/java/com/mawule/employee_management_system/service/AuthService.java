@@ -10,4 +10,6 @@ public interface AuthService {
     Mono<AuthResponse> register(RegisterRequest request);
 
     Mono<AuthResponse> login(LoginRequest request);
+
+    Mono<Void> logout(String authorizationHeader);
 }

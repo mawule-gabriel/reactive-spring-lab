@@ -4,10 +4,12 @@ import com.mawule.employee_management_system.dto.request.EmployeeRequest;
 import com.mawule.employee_management_system.dto.request.EmployeeSelfUpdateRequest;
 import com.mawule.employee_management_system.entity.Department;
 import com.mawule.employee_management_system.entity.Employee;
+import com.mawule.employee_management_system.entity.User;
 import com.mawule.employee_management_system.exception.DuplicateEmailException;
 import com.mawule.employee_management_system.exception.ResourceNotFoundException;
 import com.mawule.employee_management_system.repository.DepartmentRepository;
 import com.mawule.employee_management_system.repository.EmployeeRepository;
+import com.mawule.employee_management_system.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +24,8 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +36,9 @@ class EmployeeServiceImplTest {
 
     @Mock
     private DepartmentRepository departmentRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private EmployeeServiceImpl employeeService;
@@ -82,6 +89,49 @@ class EmployeeServiceImplTest {
                     assertThat(response.departmentName()).isEqualTo("Engineering");
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void deleteErrorsWhenEmployeeMissing() {
+        when(employeeRepository.findById(99L)).thenReturn(Mono.empty());
+
+        StepVerifier.create(employeeService.delete(99L))
+                .expectError(ResourceNotFoundException.class)
+                .verify();
+    }
+
+    @Test
+    void deleteRemovesLinkedUserAccount() {
+        Employee jane = new Employee(
+                1L, "Jane", "Doe", "jane@company.com", "Engineer",
+                new BigDecimal("95000.00"), LocalDate.of(2024, 1, 15), 1L, null);
+        User janeLogin = new User(1L, "jane@company.com", "hashed-password", "ROLE_USER");
+
+        when(employeeRepository.findById(1L)).thenReturn(Mono.just(jane));
+        when(employeeRepository.deleteById(1L)).thenReturn(Mono.empty());
+        when(userRepository.findByEmail("jane@company.com")).thenReturn(Mono.just(janeLogin));
+        when(userRepository.delete(janeLogin)).thenReturn(Mono.empty());
+
+        StepVerifier.create(employeeService.delete(1L))
+                .verifyComplete();
+
+        verify(userRepository).delete(janeLogin);
+    }
+
+    @Test
+    void deleteSucceedsWhenNoLinkedUserExists() {
+        Employee jane = new Employee(
+                1L, "Jane", "Doe", "jane@company.com", "Engineer",
+                new BigDecimal("95000.00"), LocalDate.of(2024, 1, 15), 1L, null);
+
+        when(employeeRepository.findById(1L)).thenReturn(Mono.just(jane));
+        when(employeeRepository.deleteById(1L)).thenReturn(Mono.empty());
+        when(userRepository.findByEmail("jane@company.com")).thenReturn(Mono.empty());
+
+        StepVerifier.create(employeeService.delete(1L))
+                .verifyComplete();
+
+        verify(userRepository, never()).delete(any(User.class));
     }
 
     @Test

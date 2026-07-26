@@ -10,9 +10,11 @@ import com.mawule.employee_management_system.exception.DuplicateEmailException;
 import com.mawule.employee_management_system.exception.ResourceNotFoundException;
 import com.mawule.employee_management_system.repository.DepartmentRepository;
 import com.mawule.employee_management_system.repository.EmployeeRepository;
+import com.mawule.employee_management_system.repository.UserRepository;
 import com.mawule.employee_management_system.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -22,6 +24,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
 
     @Override
     public Mono<EmployeeResponse> create(EmployeeRequest request) {
@@ -80,10 +83,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Transactional
     public Mono<Void> delete(Long id) {
         return employeeRepository.findById(id)
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Employee not found with id: " + id)))
-                .flatMap(employee -> employeeRepository.deleteById(employee.getId()));
+                .flatMap(employee -> employeeRepository.deleteById(employee.getId())
+                        .then(userRepository.findByEmail(employee.getEmail()))
+                        .flatMap(userRepository::delete));
     }
 
     @Override

@@ -1,7 +1,7 @@
 -- Creates the departments table
 
 CREATE TABLE IF NOT EXISTS departments (
-    id          BIGINT          NOT NULL AUTO_INCREMENT,
+    id          BIGSERIAL       NOT NULL,
     name        VARCHAR(150)    NOT NULL,
     description VARCHAR(500),
     created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
